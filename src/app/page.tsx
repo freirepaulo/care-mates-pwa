@@ -5,12 +5,14 @@ import { db } from "@/lib/db";
 import { RecorderService } from "@/lib/recorder";
 import { syncEngine } from "@/lib/sync-engine";
 import { Recording } from "@/types/recording";
+import { reconcileWithServer } from "@/util/helpers";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 
 export default function Home() {
   const [isRecording, setIsRecording] = useState(false);
+  const [serverCount, setServerCount] = useState<number | null>(null);
   const recorderRef = useRef<RecorderService | null>(null);
 
   const recordings = useLiveQuery(
@@ -19,6 +21,15 @@ export default function Home() {
   );
 
   useEffect(() => {
+    async function bootstrap() {
+      await syncEngine.processQueue();
+
+      const count = await reconcileWithServer();
+      setServerCount(count);
+    }
+
+    bootstrap();
+
     const requestPersistence = async () => {
       if (navigator.storage && navigator.storage.persist) {
         const granted = await navigator.storage.persist();
@@ -97,6 +108,14 @@ export default function Home() {
         >
           {isRecording ? "⏹ Stop Recording" : "🎤 Start Recording"}
         </button>
+
+        {serverCount !== null && (
+          <div className="mb-4 flex justify-center">
+            <div className="bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-medium shadow-sm">
+              🟢 Synced with server ({serverCount} items)
+            </div>
+          </div>
+        )}
 
         <div className="space-y-4">
           {recordings?.map((recording) => (

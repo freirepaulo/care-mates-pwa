@@ -1,18 +1,38 @@
+import { db } from "@/lib/database";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File;
-    const id = formData.get("id");
+    const id = formData.get("id") as string;
 
-    // simulate network delay
-    await new Promise((res) => setTimeout(res, 1000));
+    if (!file || !id) {
+      return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    }
 
-    console.log("Uploaded:", id, file?.name);
+    // Check if already exists (idempotency)
+    const existing = db
+      .prepare("SELECT id FROM recordings WHERE id = ?")
+      .get(id);
+
+    if (existing) {
+      return NextResponse.json({
+        success: true,
+        duplicate: true,
+      });
+    }
+
+    db.prepare(
+      `
+      INSERT INTO recordings (id, filename, uploadedAt)
+      VALUES (?, ?, ?)
+    `,
+    ).run(id, file.name, new Date().toISOString());
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ success: false }, { status: 500 });
+    console.error(error);
+    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 }

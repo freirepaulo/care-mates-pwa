@@ -1,171 +1,117 @@
-# 🩺 CareMates Recorder – Offline-First PWA
+# CareMates PWA – Offline-First Audio Recorder
 
-A lightweight Progressive Web App (PWA) that allows caregivers to record patient admission audio offline and automatically synchronize recordings once connectivity is restored.
+Public URL: https://care-mates-pwa-6hhc.vercel.app/
 
-This application was built as part of the CareMates coding challenge.
+## Overview
 
----
+CareMates PWA is an offline-first Progressive Web App that allows users to record audio, store recordings locally using IndexedDB, and automatically synchronize them with a backend when connectivity is restored. The system is designed with resilience, data integrity, and real-world synchronization patterns in mind.
 
-## 🚀 Live Demo
+## Tech Stack
 
-🔗 **Deployed URL:**  
-https://your-deployment-url.com
+Frontend:
 
-🔗 **GitHub Repository:**  
-https://github.com/your-username/care-mates-pwa
-
----
-
-## 🎯 Core Features
-
-### 🎤 Recording Management
-
-- Record audio using the MediaRecorder API
-- Store recordings locally using IndexedDB
-- Display recordings with metadata:
-  - Filename
-  - Timestamp
-  - Status
-- Local playback
-- Delete recordings
-- Proper microphone cleanup after recording stops
-
----
-
-### 🔄 Offline-First Sync Engine
-
-- Persistent upload queue stored in IndexedDB
-- Automatic connectivity detection (online/offline)
-- Automatic background sync when connection is restored
-- Sequential upload processing
-- Exponential backoff retry strategy (max 3 attempts)
-- Manual retry for failed uploads
-- Abort upload if user deletes recording during upload
-- Delete local recording after successful upload
-
----
-
-### 📱 PWA Features
-
-- Service Worker with app shell caching
-- Installable on desktop and mobile
-- Offline UI support
-- Persistent storage request
-- Production-ready configuration using `next-pwa`
-
----
-
-## 🧠 Architecture Overview
-
-The application follows an offline-first architecture:
-
-UI (React)  
-↓  
-RecorderService (MediaRecorder API)  
-↓  
-IndexedDB (Dexie)  
-↓  
-SyncEngine (Queue Processor)  
-↓  
-Next.js API Upload Endpoint
-
-### Why IndexedDB?
-
-- Supports large audio blobs
-- Asynchronous
-- Persistent across sessions
-- Survives browser refresh
-
----
-
-## 🔁 Sync Strategy
-
-**Queue definition:**  
-Recordings with status `"local"` or `"failed"`
-
-**Sync flow:**
-
-1. When online, process queue sequentially
-2. Update status to `"uploading"`
-3. On success → delete from IndexedDB
-4. On failure → retry with exponential backoff
-
-**Backoff formula:**
-
-delay = min(1000 \* 2^attempt, 8000)
-
-**Max retries:** 3
-
----
-
-## ⚠️ Edge Cases Handled
-
-- Offline recording
-- Page reload while offline
-- Delete during upload (AbortController)
-- Retry after network failure
-- Memory cleanup using `URL.revokeObjectURL`
-- Microphone track cleanup
-- Persistent storage request
-
----
-
-## 🛠 Tech Stack
-
-- Next.js 16
+- Next.js 16 (App Router)
+- React 19
 - TypeScript
-- Tailwind CSS
-- Dexie (IndexedDB wrapper)
-- next-pwa
-- MediaRecorder API
+- TailwindCSS
+- IndexedDB (Dexie)
+- PWA (Service Worker + Manifest)
 
----
+Backend:
 
-## 📦 Installation
+- Next.js API Routes
+- SQLite (better-sqlite3)
+- Idempotent upload handling
+
+## Architecture
+
+The application follows an offline-first approach.
+
+When a recording is created:
+
+- The audio Blob is stored locally in IndexedDB
+- The recording is marked with status "local"
+- The UI updates immediately without requiring network access
+
+When the device reconnects:
+
+- A synchronization engine processes pending recordings
+- Uploads are sent to POST /api/upload
+- Status transitions from "local" to "uploading" to "synced"
+- Failed uploads can be retried safely
+
+The backend uses SQLite for persistence. Metadata is stored in /data/recordings.db in a table called "recordings" containing:
+
+- id
+- filename
+- uploadedAt
+
+Uploads are idempotent. If a recording with the same ID already exists, the API safely returns success without duplicating data.
+
+## Client–Server Reconciliation
+
+On application startup:
+
+1. Pending uploads are processed
+2. The client fetches GET /api/recordings
+3. Local IndexedDB state is reconciled with server state
+4. Confirmed items are marked as "synced"
+
+The UI displays a status indicator such as:
+
+Synced with server (X items)
+
+This guarantees consistency between client and backend.
+
+## API Endpoints
+
+POST /api/upload  
+Accepts FormData with:
+
+- file
+- id  
+  Performs validation, idempotency check, and SQLite persistence.
+
+GET /api/recordings  
+Returns all persisted recordings for reconciliation and auditing.
+
+## Running Locally
 
 Install dependencies:
 
-yarn install
+npm install
 
-Run in development mode:
+Run development server:
 
-yarn dev
+npm run dev
 
-Production build (PWA enabled):
+Open in browser:
 
-yarn build  
-yarn start
+http://localhost:3000
 
----
+The SQLite database file is automatically created inside the /data directory.
 
-## 🧪 Suggested Testing Scenarios
+## Deployment
 
-1. Record while offline
-2. Close and reopen the browser
-3. Restore connectivity and verify automatic sync
-4. Simulate server failure and verify retry behavior
-5. Delete during upload and ensure request abort
+Deployed on Vercel:
 
----
+https://care-mates-pwa-6hhc.vercel.app/
 
-## 🔐 Idempotency Strategy
+Node version is fixed in package.json:
 
-Each recording uses a UUID as identifier.  
-The backend receives both the `recording.id` and the audio file, allowing safe reprocessing and preventing duplicate uploads.
+"engines": {
+"node": "20.19.0"
+}
 
----
+## Summary
 
-## 📈 Possible Improvements
+This project demonstrates:
 
-- Upload progress indicator
-- Integration with cloud storage (S3, Supabase, etc.)
-- Background Sync API usage
-- Authentication layer
-- Audio compression before upload
+- Offline-first architecture
+- Robust synchronization logic
+- Idempotent API design
+- Client–server reconciliation
+- Progressive Web App capabilities
+- Graceful handling of network instability
 
----
-
-## 👤 Author
-
-Your Name  
-your.email@example.com
+The system prioritizes reliability and data integrity while maintaining a clean and lightweight architecture.

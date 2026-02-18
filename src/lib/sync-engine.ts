@@ -69,7 +69,7 @@ class SyncEngine {
     this.activeUploads.set(recording.id, controller);
 
     const formData = new FormData();
-    formData.append("file", recording.blob);
+    formData.append("file", recording.blob, recording.filename);
     formData.append("id", recording.id);
 
     const response = await fetch("/api/upload", {

@@ -27,8 +27,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
-    "typescript": "^5",
-    "minimatch": "^11.0.0"
+    "typescript": "^5"
   },
   "resolutions": {
     "minimatch": "10.2.1"

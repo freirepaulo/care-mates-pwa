@@ -1,8 +1,8 @@
 "use client";
 
+import { syncEngine } from "@/lib/sync-engine";
 import { reconcileWithServer } from "@/util/helpers";
 import { useEffect, useState } from "react";
-import { syncEngine } from "@/lib/sync-engine";
 
 const SYNC_INTERVAL_MS = 5000;
 
@@ -31,7 +31,10 @@ export function useSyncBootstrap() {
 
   useEffect(() => {
     async function trySync() {
-      if (navigator.onLine) await syncEngine.processQueue();
+      if (!navigator.onLine) return;
+      await syncEngine.processQueue();
+      const count = await reconcileWithServer();
+      setServerCount(count);
     }
 
     trySync();

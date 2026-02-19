@@ -11,7 +11,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
 
-    // Check if already exists (idempotency)
     const existing = db
       .prepare("SELECT id FROM recordings WHERE id = ?")
       .get(id);
@@ -32,7 +31,14 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Upload failed";
+    console.error("Upload error:", error);
+    return NextResponse.json(
+      {
+        error: "Upload failed",
+        details: process.env.NODE_ENV === "development" ? message : undefined,
+      },
+      { status: 500 },
+    );
   }
 }
